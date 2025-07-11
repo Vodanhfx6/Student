@@ -31,6 +31,7 @@ public class LessonResult {
     private String uploadedFile;
     private String comment;
     private Date updatedAt;
+    private Integer examScore;
 
     public enum Status {
         IN_PROGRESS, DONE

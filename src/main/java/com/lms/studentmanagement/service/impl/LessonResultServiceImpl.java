@@ -16,7 +16,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -71,7 +75,7 @@ public class LessonResultServiceImpl implements LessonResultService {
                 examScore = examResult.getScore();
             }
         }
-        dto.setExamScore(examScore);
+        dto.setExamScore(examScore != null ? examScore : result.getExamScore());
         return dto;
     }
 
@@ -84,6 +88,32 @@ public class LessonResultServiceImpl implements LessonResultService {
         dto.setUploadedFile(result.getUploadedFile());
         dto.setComment(result.getComment());
         dto.setUpdatedAt(result.getUpdatedAt());
+        dto.setExamScore(result.getExamScore());
         return dto;
+    }
+
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void updateLessonResultsWithExamScores() {
+        logger.info("Scheduled task: updating lesson results with exam scores.");
+
+        List<LessonResult> allResults = lessonResultRepository.findAll();
+        for (LessonResult result : allResults) {
+            try {
+                ExamDto exam = examClient.getExamByLessonId(result.getLesson().getId());
+                Integer examScore = null;
+                if (exam != null && exam.getId() != null) {
+                    ExamResultDto examResult = examClient.getExamResult(exam.getId(), String.valueOf(result.getUser().getId()));
+                    if (examResult != null) {
+                        examScore = examResult.getScore();
+                    }
+                }
+                result.setExamScore(examScore);
+                result.setUpdatedAt(new Date());
+                lessonResultRepository.save(result);
+            } catch (Exception e) {
+                logger.error("Failed to update exam score for LessonResult id {}: {}", result.getId(), e.getMessage());
+            }
+        }
     }
 }
