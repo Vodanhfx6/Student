@@ -22,6 +22,7 @@ public class LessonResult {
     @ManyToOne
     private Lesson lesson;
 
+
     @ManyToOne
     private User user;
 
